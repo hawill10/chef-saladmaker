@@ -1,0 +1,40 @@
+Instructions:
+1. Run Program Chef by invoking ./chef -n NumOfSalads -m cheftime.
+2. Prompt will appear that shows id of shared memory.
+3. Run 3 Saladmakers by invoking ./create_saladmakers -m salmkrtime -s shmid.
+4. Press Enter or Return on the Chef process to continue.
+5. After all programs finish running, a log file will be created in a file named "log".
+* if program seems like it's not running properly, try executing "make clean_sem", which purges all semaphores that might not have been erased properly
+* the program assumes 80g of tomato, 50g of green pepper and 30g of onion is required for one salad
+
+Design Choices:
+
+Shared Memory:
+Shared memory holds a struct that manages variables accessed by all processes.
+
+There are semaphores for:
+1. Notifying salad makers that ingredients are ready to be taken
+2. Notifying chef that workbench is empty
+3. Exclusive access to log file
+4. Exclusive access to shared variables (e.g. time_buffer, number of salads made, status of salad makers)
+
+Strategy for Synchronization:
+semaphore workbench (initial value set to 1)
+semaphore saladmakers[3] (initial values all set to 0)
+
+Chef                                Saladmaker (i)
+choose a saladmaker i               P(saladmakers[i])
+P(workbench)                        take ingredients from workbench
+place ingredients on workbench      V(workbench)
+V(saladmakers[i])                   make salad if it has enough ingredients
+take break                          
+
+Listing of Times Saladmakers Worked in Parallel:
+1. A time buffer array of length 6 that stores times (type double) in shared memory. 
+(since there are 3 saladmakers, at most 4 records can be written before it is read by the chef)
+2. Each time two saladmakers start working together, the time is written to time buffer.
+3. Each time a saladmaker stops working and only one is left working, the time is written to the time buffer.
+4. Chef maintains a linked list that stores records read from the time buffer.
+5. Each time chef places ingredients, it reads from the time buffer.
+6. The number of records to be read (time_count) is stored in shared memory and updated for each read and write.
+7. Chef prints records stored in the linked list alternating between start time and end time.
